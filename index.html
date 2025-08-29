@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Day Tracker — V4</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f3e7d3" />
+  <style>
+    :root{
+      --bg1: #fbf6ee; /* parchment light */
+      --bg2: #f3e7d3; /* parchment warm */
+      --card: rgba(255,255,255,0.8);
+      --accent: #c0392b; /* red click button */
+      --green: #27ae60;
+      --muted: #6b6b6b;
+      --shadow: 0 8px 24px rgba(16,24,40,0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;}
+    body{
+      background: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.6), transparent 10%),
+                  linear-gradient(135deg,var(--bg1),var(--bg2));
+      -webkit-font-smoothing:antialiased;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .shell{
+      width:100%;
+      max-width:980px;
+      min-height:560px;
+      border-radius:18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.85));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    header.top{
+      padding:18px 24px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand{
+      display:flex;gap:12px;align-items:center;
+    }
+    .logo{
+      width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,#fff7f6,#ffdede);
+      display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;border:1px solid rgba(0,0,0,0.03);
+    }
+    .title{font-size:18px;font-weight:700;color:#2b2b2b;}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
+    .controls{display:flex;gap:8px;align-items:center;}
+    .btn{padding:8px 12px;border-radius:10px;border:none;background:#fff;box-shadow:0 4px 10px rgba(0,0,0,0.05);cursor:pointer;}
+    .btn.primary{background:linear-gradient(180deg,#c0392b,#a52820);color:#fff;}
+    .top-info{text-align:right;}
+    #daysLeft{font-weight:700;color:#333;}
+    #streak{font-size:13px;color:#b03a2b;margin-top:4px;}
+
+    main{padding:18px 24px;flex:1;display:flex;flex-direction:column;gap:14px;}
+    .setup-card{
+      margin:auto;
+      width:420px;
+      background:var(--card);
+      border-radius:14px;
+      padding:22px;
+      box-shadow:0 6px 18px rgba(16,24,40,0.06);
+      text-align:center;
+    }
+    .setup-card h2{margin:6px 0 10px;font-size:20px;}
+    .date-input{padding:10px 12px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);width:100%;box-sizing:border-box;}
+    .set-btn{margin-top:12px;padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(180deg,#9b2b2b,#7a1f1f);color:white;font-weight:700;cursor:pointer;}
+
+    /* Calendar */
+    .calendar-wrap{display:flex;flex-direction:column;gap:12px;}
+    .month-row{display:flex;justify-content:space-between;align-items:center;}
+    .month-title{font-size:18px;font-weight:700;color:#2b2b2b;}
+    .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;font-size:13px;color:var(--muted);}
+    .weekday{padding:8px 10px;text-align:center;border-radius:10px;background:transparent;}
+    .grid{margin-top:8px;display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+    .cell{
+      background:linear-gradient(180deg,rgba(255,255,255,0.9),rgba(255,255,255,0.85));
+      border-radius:14px;padding:10px;min-height:96px;
+      box-shadow:0 4px 10px rgba(16,24,40,0.04);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;transition:transform 150ms ease;
+    }
+    .cell:hover{transform:translateY(-6px);}
+    .cell.today{background:linear-gradient(135deg,#fff3f2,#ffecec);color:#2b2b2b;}
+    .daynum{font-weight:700;margin-bottom:8px;}
+    .click-count{font-size:18px;font-weight:700;color:#333;margin-top:8px;min-height:22px;}
+    .faint{font-size:12px;color:var(--muted);margin-top:6px;min-height:18px;}
+
+    /* Red circular clicker */
+    .clicker{
+      width:46px;height:46px;border-radius:50%;background:var(--accent);border:none;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;
+      box-shadow:0 6px 20px rgba(192,57,43,0.22);cursor:pointer;transition:transform 120ms ease;
+    }
+    .clicker:active{transform:scale(0.92);}
+
+    .mark-btn{margin-top:10px;padding:8px 12px;border-radius:10px;background:linear-gradient(180deg,#27ae60,#1e8449);color:#fff;border:none;cursor:pointer;font-weight:700;display:none;}
+    .mark-btn.visible{display:inline-block;}
+
+    footer{padding:12px 18px;background:transparent;text-align:center;color:var(--muted);font-size:13px;}
+    @media (max-width:720px){
+      .shell{min-height:100%;border-radius:0;}
+      .calendar-wrap{padding-bottom:40px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="shell" role="application">
+    <header class="top">
+      <div class="brand">
+        <div class="logo">DT</div>
+        <div>
+          <div class="title">Day Tracker</div>
+          <div class="subtitle">Track clicks • Mark completes • Streaks</div>
+        </div>
+      </div>
+      <div class="top-info">
+        <div id="daysLeft">—</div>
+        <div id="streak">🔥 Streak: 0</div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Setup (first launch) -->
+      <div id="setup" class="setup-card" aria-hidden="true" style="display:none;">
+        <h2>Set your target date</h2>
+        <input id="targetInput" class="date-input" type="date" />
+        <button id="setTarget" class="set-btn">Set Target</button>
+        <p style="margin-top:10px;color:var(--muted);font-size:13px;">You can change this later from the menu.</p>
+      </div>
+
+      <!-- Calendar -->
+      <div id="app" style="display:none;">
+        <div class="calendar-wrap">
+          <div class="month-row">
+            <div class="month-title" id="monthTitle">Month</div>
+            <div class="controls">
+              <button id="prev" class="btn">◀</button>
+              <button id="next" class="btn">▶</button>
+            </div>
+          </div>
+
+          <div class="weekdays" aria-hidden="true">
+            <div class="weekday">Sun</div><div class="weekday">Mon</div><div class="weekday">Tue</div><div class="weekday">Wed</div><div class="weekday">Thu</div><div class="weekday">Fri</div><div class="weekday">Sat</div>
+          </div>
+
+          <div id="grid" class="grid" role="grid"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer>Made for you — smooth & simple.</footer>
+  </div>
+
+<script>
+/* Data keys */
+const STORAGE = {
+  TARGET: 'dt_target_date',       // 'YYYY-MM-DD'
+  CLICKS: 'dt_click_counts',      // JSON object {dateStr: number}
+  COMPLETED: 'dt_completed_days'  // JSON array of dateStr
+};
+
+// Load state
+let target = localStorage.getItem(STORAGE.TARGET);
+let clicks = JSON.parse(localStorage.getItem(STORAGE.CLICKS) || '{}');
+let completed = JSON.parse(localStorage.getItem(STORAGE.COMPLETED) || '[]');
+
+// UI refs
+const setupEl = document.getElementById('setup');
+const appEl = document.getElementById('app');
+const gridEl = document.getElementById('grid');
+const monthTitle = document.getElementById('monthTitle');
+const daysLeftEl = document.getElementById('daysLeft');
+const streakEl = document.getElementById('streak');
+const targetInput = document.getElementById('targetInput');
+const setTargetBtn = document.getElementById('setTarget');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+
+let viewDate = new Date(); // month displayed
+
+function formatKey(date){ return date.toDateString(); } // stable key
+
+function showSetupIfNeeded(){
+  if(!target){ setupEl.style.display='block'; appEl.style.display='none'; }
+  else { setupEl.style.display='none'; appEl.style.display='block'; render(); }
+}
+setTargetBtn.addEventListener('click', ()=>{
+  const v = targetInput.value;
+  if(!v) { alert('Select a date'); return; }
+  localStorage.setItem(STORAGE.TARGET, v);
+  target = v;
+  showSetupIfNeeded();
+});
+
+prevBtn.addEventListener('click', ()=>{ viewDate.setMonth(viewDate.getMonth()-1); render(); });
+nextBtn.addEventListener('click', ()=>{ viewDate.setMonth(viewDate.getMonth()+1); render(); });
+
+function daysLeftText(){
+  if(!target) return '—';
+  const now = new Date();
+  const t = new Date(target+'T00:00:00');
+  const diff = Math.ceil((t - now) / (1000*60*60*24));
+  if(diff>0) return `${diff} days left until ${t.toDateString()}`;
+  if(diff===0) return `🎉 Today is the target!`;
+  return `${Math.abs(diff)} days since ${t.toDateString()}`;
+}
+
+function render(){
+  daysLeftEl.textContent = daysLeftText();
+  monthTitle.textContent = viewDate.toLocaleString(undefined,{month:'long', year:'numeric'});
+  gridEl.innerHTML='';
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const first = new Date(year,month,1);
+  const last = new Date(year,month+1,0);
+  // fill blanks for week start
+  for(let i=0;i<first.getDay();i++){ const blank = document.createElement('div'); blank.className='cell'; blank.style.visibility='hidden'; gridEl.appendChild(blank); }
+  const today = new Date();
+  for(let d=1; d<=last.getDate(); d++){
+    const dt = new Date(year,month,d);
+    const key = formatKey(dt);
+    const cell = document.createElement('div'); cell.className='cell';
+    if(dt.toDateString() === today.toDateString()) cell.classList.add('today');
+    // day num
+    const num = document.createElement('div'); num.className='daynum'; num.textContent = d; cell.appendChild(num);
+    // clicker only for today
+    if(dt.toDateString() === today.toDateString()){
+      const clicker = document.createElement('button'); clicker.className='clicker'; clicker.title='Tap to count';
+      clicker.onclick = (e)=>{ e.stopPropagation(); incrementClick(dt); };
+      cell.appendChild(clicker);
+    }
+    // show count (always show if exists)
+    const cnt = clicks[key] || 0;
+    const countEl = document.createElement('div'); countEl.className='click-count'; countEl.textContent = cnt>0?cnt:''; cell.appendChild(countEl);
+    // completed indicator
+    const done = completed.includes(key);
+    if(done){ const doneEl = document.createElement('div'); doneEl.className='faint'; doneEl.textContent='✅ Completed'; cell.appendChild(doneEl); }
+    // mark complete button appears for today only after 10 PM
+    if(dt.toDateString() === today.toDateString()){
+      const hr = today.getHours();
+      const mark = document.createElement('button'); mark.className='mark-btn'; mark.textContent='Mark Complete';
+      if(hr>=22 && !done){ mark.classList.add('visible'); mark.onclick = ()=>{ markComplete(dt); }; cell.appendChild(mark); }
+      else if(done){ /* already shown done above */ }
+    }
+    gridEl.appendChild(cell);
+  }
+  updateStreak();
+}
+
+function incrementClick(dt){
+  const key = formatKey(dt);
+  clicks[key] = (clicks[key]||0) + 1;
+  localStorage.setItem(STORAGE.CLICKS, JSON.stringify(clicks));
+  render(); // re-render to update count
+}
+
+function markComplete(dt){
+  const key = formatKey(dt);
+  if(!completed.includes(key)) completed.push(key);
+  localStorage.setItem(STORAGE.COMPLETED, JSON.stringify(completed));
+  render();
+}
+
+function updateStreak(){
+  // count consecutive completed days up to yesterday? or up to today if completed today.
+  let streak = 0;
+  let cur = new Date();
+  while(true){
+    const k = formatKey(cur);
+    if(completed.includes(k)) { streak++; cur.setDate(cur.getDate()-1); }
+    else break;
+  }
+  streakEl.textContent = '🔥 Streak: '+streak;
+}
+
+// ensure midnight refresh (move clicker to new date)
+function scheduleMidnightRefresh(){
+  const now = new Date();
+  const nextMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 5);
+  setTimeout(()=>{ viewDate = new Date(); render(); scheduleMidnightRefresh(); }, nextMid - now + 20);
+}
+scheduleMidnightRefresh();
+
+// initial
+showSetupIfNeeded();
+</script>
+</body>
+</html>
